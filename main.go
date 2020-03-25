@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -12,12 +13,25 @@ import (
 	"time"
 )
 
+// flags
+var cpm bool    // toggle CPM or WPM
+var list string // input sentence list to be used
+var rounds int  // how many sentences to be tested on
+
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
+	parseFlags()
 	countdown(3)
 	clear()
-	wpm, errors := playRound(3)
+	wpm, errors := playRound(rounds)
 	fmt.Println("Result:", resultStats(wpm, errors))
+}
+
+func parseFlags() {
+	flag.BoolVar(&cpm, "cpm", false, "Use CPM instead of WPM")
+	flag.StringVar(&list, "list", "shakespeare", "Input sentence list to be used")
+	flag.IntVar(&rounds, "rounds", 3, "How many sentences to be tested on")
+	flag.Parse()
 }
 
 func countdown(length int) {
@@ -37,7 +51,7 @@ func playRound(rounds int) (float64, int) {
 		fmt.Println(resultStats(tWPM, tErrors), "\n\n\n")
 		wpm, errors := ttest(getSentence())
 
-		if tWPM != 0 {
+		if tWPM != 0 { // calculate average wpm
 			tWPM = (tWPM + wpm) / 2
 		} else {
 			tWPM = wpm
@@ -57,20 +71,20 @@ func plural(n int) string {
 }
 
 func ttest(s string) (float64, int) {
-	start := time.Now()
 	fmt.Println(" " + s)
+	start := time.Now() // start the timer
 	result := input(":")
-	t := time.Now()
-	elapsed := t.Sub(start)
-	wpm := calcWPM(s, elapsed)
-	errors := calcErrors(s, result)
+	t := time.Now()                 // end the timer
+	elapsed := t.Sub(start)         // calculate time elapsed
+	wpm := calcWPM(s, elapsed)      // calculate wpm
+	errors := calcErrors(s, result) // calculate errors
 	return wpm, errors
 }
 
 func input(s string) string {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print(s)
-	text, err := reader.ReadString('\n')
+	text, err := reader.ReadString('\n') // get user input
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -79,7 +93,13 @@ func input(s string) string {
 }
 
 func resultStats(wpm float64, errorCount int) string {
-	return fmt.Sprintf(" %.1f WPM | %d error%s", wpm, errorCount, plural(errorCount))
+	unit := "WPM"
+	if cpm {
+		unit = "CPM"
+		wpm *= 5
+	}
+
+	return fmt.Sprintf(" %.1f %s | %d error%s", wpm, unit, errorCount, plural(errorCount))
 }
 
 func calcWPM(s string, elapsed time.Duration) float64 {
@@ -109,13 +129,13 @@ func calcErrors(expected string, result string) int {
 
 func getSentence() string {
 	path := directory()
-	raws, err := ioutil.ReadFile(path + "sentences/shakespeare")
+	raws, err := ioutil.ReadFile(path + "sentences/" + list)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	sentences := strings.Split(string(raws), "\n")
-	sentence := rand.Intn(len(sentences) - 1)
+	sentence := rand.Intn(len(sentences) - 1) // picks a random sentence from the given file
 	return sentences[sentence]
 
 }
@@ -127,7 +147,7 @@ func directory() string {
 		log.Fatal(err)
 	}
 
-	exPath := filepath.Dir(ex) + "/"
+	exPath := filepath.Dir(ex) + "/" // find program's working directory
 	return exPath
 }
 
