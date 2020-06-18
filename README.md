@@ -8,7 +8,7 @@ Prerequisites:
 
 Download and build:
 ``` bash
-git clone https://github.com/Semi-Colin/typist
+git clone https://github.com/semilin/typist
 cd typist
 go build
 ```
